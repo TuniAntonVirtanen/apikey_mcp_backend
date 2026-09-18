@@ -1,4 +1,11 @@
 // MCP backend
+//
+// This module needed NO functional changes for the API-key flow. It has no
+// opinion about how the caller (mcp-app) got its token — OAuth code flow or
+// API-key exchange both produce the exact same shape of RS256 JWT, bound to
+// the same MCP_APP_RESOURCE_URL audience. This service keeps doing exactly
+// what it did before: verify the token cryptographically and by audience,
+// then forward to the customer backend's data API.
 import express from "express";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -14,11 +21,12 @@ app.use((req, res, next) => {
 const CUSTOMER_BACKEND_URL = process.env.CUSTOMER_BACKEND_URL || "https://customer-backend-stqk.onrender.com";
 
 // The resource identifier that tokens flowing through this service must be
-// bound to. This is the same value the client requested as `resource` at
-// /oauth/authorize on the customer backend, and the same value mcp-app
-// checks against its own `${host}/mcp` — i.e. the MCP protected resource
-// this token was actually issued for. Without this check, any token signed
-// by the customer backend's key (for *any* purpose) would be accepted here.
+// bound to. This is the same value mcp-app requests as `resource` when it
+// calls the customer backend's /api/exchange-api-key endpoint, and the same
+// value mcp-app checks against its own `${host}/mcp` — i.e. the MCP
+// protected resource this token was actually issued for. Without this
+// check, any token signed by the customer backend's key (for *any*
+// purpose) would be accepted here.
 const MCP_APP_RESOURCE_URL = process.env.MCP_APP_RESOURCE_URL || "https://prototype-mcp.onrender.com/mcp";
 
 // Helper to convert JWK from Customer Backend into standard PEM format for JWT verification
@@ -34,7 +42,6 @@ async function getPublicKeyFromJWKS() {
   const jwk = jwks.keys && jwks.keys[0];
   if (!jwk) throw new Error("No public key found in JWKS");
 
-  // Export JWK to standard public key object and PEM string
   const keyObject = crypto.createPublicKey({ key: jwk, format: "jwk" });
   cachedPemPublicKey = keyObject.export({ type: "spki", format: "pem" });
   return cachedPemPublicKey;
@@ -51,9 +58,6 @@ const authenticateToken = async (req, res, next) => {
   try {
     const publicKey = await getPublicKeyFromJWKS();
 
-    // Authenticate token cryptographically against RS256 signature, and
-    // verify it was actually issued for the mcp-app resource this service
-    // sits behind, not merely signed by a trusted key for some other purpose.
     const verifiedPayload = jwt.verify(token, publicKey, {
       algorithms: ["RS256"],
       audience: MCP_APP_RESOURCE_URL
@@ -63,7 +67,6 @@ const authenticateToken = async (req, res, next) => {
     next();
   } catch (err) {
     console.error("[MCP BACKEND AUTH ERROR]", err.message);
-    // Invalidate cached key if verification fails to allow key rotation recovery
     cachedPemPublicKey = null;
     return res.status(403).json({ error: "forbidden", message: "Token verification failed" });
   }
