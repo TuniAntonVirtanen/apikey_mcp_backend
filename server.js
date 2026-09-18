@@ -1,5 +1,4 @@
-// MCP-BACKEND
-
+// MCP backend
 import express from "express";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -15,15 +14,11 @@ app.use((req, res, next) => {
 const CUSTOMER_BACKEND_URL = process.env.CUSTOMER_BACKEND_URL || "https://customer-backend-stqk.onrender.com";
 
 // The resource identifier that tokens flowing through this service must be
-// bound to. This is the same value mcp-app sends as `resource` when it
-// exchanges a user-supplied API key for a token at customer-backend's
-// /oauth/token, and the same value mcp-app checks against its own
-// `${host}/mcp` — i.e. the MCP protected resource this token was actually
-// issued for. Without this check, any token signed by customer-backend's key
-// (for *any* purpose) would be accepted here.
-//
-// NOTE: this MUST exactly match the PUBLIC_URL mcp-app is configured with
-// (mcp-app builds its resource string as `${PUBLIC_URL}/mcp`).
+// bound to. This is the same value the client requested as `resource` at
+// /oauth/authorize on the customer backend, and the same value mcp-app
+// checks against its own `${host}/mcp` — i.e. the MCP protected resource
+// this token was actually issued for. Without this check, any token signed
+// by the customer backend's key (for *any* purpose) would be accepted here.
 const MCP_APP_RESOURCE_URL = process.env.MCP_APP_RESOURCE_URL || "https://prototype-mcp.onrender.com/mcp";
 
 // Helper to convert JWK from Customer Backend into standard PEM format for JWT verification
@@ -59,9 +54,6 @@ const authenticateToken = async (req, res, next) => {
     // Authenticate token cryptographically against RS256 signature, and
     // verify it was actually issued for the mcp-app resource this service
     // sits behind, not merely signed by a trusted key for some other purpose.
-    // This check is identical regardless of whether the token originated
-    // from the old authorization-code flow or the current api_key exchange —
-    // this service doesn't need to know or care which.
     const verifiedPayload = jwt.verify(token, publicKey, {
       algorithms: ["RS256"],
       audience: MCP_APP_RESOURCE_URL
