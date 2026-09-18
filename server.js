@@ -18,7 +18,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const CUSTOMER_BACKEND_URL = process.env.CUSTOMER_BACKEND_URL || "https://customer-backend-stqk.onrender.com";
+const CUSTOMER_BACKEND_URL = process.env.CUSTOMER_BACKEND_URL || "https://apikey-customer-backend.onrender.com";
 
 // The resource identifier that tokens flowing through this service must be
 // bound to. This is the same value mcp-app requests as `resource` when it
@@ -27,7 +27,7 @@ const CUSTOMER_BACKEND_URL = process.env.CUSTOMER_BACKEND_URL || "https://custom
 // protected resource this token was actually issued for. Without this
 // check, any token signed by the customer backend's key (for *any*
 // purpose) would be accepted here.
-const MCP_APP_RESOURCE_URL = process.env.MCP_APP_RESOURCE_URL || "https://prototype-mcp.onrender.com/mcp";
+const MCP_APP_RESOURCE_URL = process.env.MCP_APP_RESOURCE_URL || "https://apikey-mcp-app.onrender.com/mcp";
 
 // Helper to convert JWK from Customer Backend into standard PEM format for JWT verification
 let cachedPemPublicKey = null;
